@@ -10,7 +10,24 @@ import java.util.List;
 
 public class SimpleJava {
 
-    static boolean hadError = false;
+    private static final Interpreter interpreter = new Interpreter();
+
+    static boolean hadError;
+    static boolean hadRuntimeError;
+
+    static void runtimeError(RuntimeError error) {
+        System.err.println(error.getMessage() +
+                "\n[line " + error.token.line + "]");
+        hadRuntimeError = true;
+    }
+
+    static void error(Token token, String message) {
+        if (token.type == TokenType.EOF) {
+            report(token.line, " at end", message);
+        } else {
+            report(token.line, " at '" + token.lexeme + "'", message);
+        }
+    }
 
     static void error(int line, String message) {
         report(line, "", message);
@@ -26,10 +43,14 @@ public class SimpleJava {
     private static void run(String source) {
         Scanner scanner = new Scanner(source);
         List<Token> tokens = scanner.scanTokens();
-        // For now, just print the tokens.
-        for (Token token : tokens) {
-            System.out.println(token);
+
+        Parser parser = new Parser(tokens);
+        Expr expression = parser.parse();
+
+        if (hadError) {
+            return;
         }
+        interpreter.interpret(expression);
     }
 
     private static void runPrompt() throws IOException {
@@ -50,6 +71,7 @@ public class SimpleJava {
 
         // Indicate an error in the exit code.
         if (hadError) System.exit(65);
+        if (hadRuntimeError) System.exit(70);
     }
 
 
